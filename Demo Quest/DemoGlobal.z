@@ -1,0 +1,28 @@
+import "std.zh"
+import "string.zh"
+import "spiritweapon\SpiritWeapon.zh"
+import "spiritweapon\scripts.zh"
+
+global script Active{
+	void run(){
+		while(true){
+			Waitdraw();
+			Waitframe();
+		}
+	}
+}
+
+global script OnExit{
+	void run(){
+	}
+}
+
+global script OnContinue{
+	void run(){
+	}
+}
+
+item script Slash{
+	void run(){
+	}
+}

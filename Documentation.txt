@@ -1,305 +1,346 @@
-Documentation
+SPIRIT WEAPON FOR ZELDA QUEST AETERNAL
+DOCUMENTATION
+
+=================== HEADER INFORMATION ===================
+NAME: Spirit Weapon
+AUTHOR: Orithan Fox
+VERSION: Alpha 1
+ZELDA QUEST VERSION: Zelda Quest AEternal (v2.55) Alpha 18 and up
+
+WARNING! THIS IS IN ALPHA STATE. FEATURES MAY BE CHANGED OR REMOVED WITHOUT PRIOR WARNING. YOU HAVE BEEN WARNED.
+
+
+=================== OVERVIEW ===================
 
 Any functions, constants, etc whose names are marked with __ at the start are for internal use. They may change or be removed in future versions without warning.
 
-The header has native support for a number of 2.54 features. When you flag the header to 2.54 or higher; a number of features exclusive to that header.
-
-It is also important that, if using this header and are using the Explode death type, that you turn off the quest rule "Bombs Hurt Link" due to a quirk in how blast damage from explosions generated via script is calculated. When you set the Damage of a Bomb Blast LWeapon generated via script; the bomb blast now hits Link for *whole* hearts equal to the weapon's Damage (eg. You set a Bomb Blast's Damage to 8 via script. Instead of dealing 2 Hearts of damage like what most weapons do, it deals 8 Hearts of damage to Link).
- 
------------------------------------------
-COMMON TERMINOLOGY
-
-A list of common terms of which various concepts are termed as in the context of this header.
-
-UID: Unique ID.
-Data: Element of an array.
-Slot: A chunk of data pertaining to a ghosted LWeapon. In the context of the Expanded Script Variables, each slot is GHOSTLW_EXPVAR_COUNT elements big. In the context of the Ghost LWeapon buffer; each slot is GHOSTLW_EXPVAR_COUNT + WEAPON_VARS elements big.
+It is also important that, if using this header and are using the Explode death type, that you turn off the quest rule "Own Bombs Hurt Link" due to a quirk in how blast damage from explosions generated via script is calculated. When you set the Damage of a Bomb Blast LWeapon generated via script; the bomb blast now hits Link for *whole* hearts equal to the weapon's Damage (eg. You set a Bomb Blast's Damage to 8 via script. Instead of dealing 2 Hearts of damage like what most weapons do, it deals 8 Hearts of damage to Link).
 
 
 
------------------------------------------
-IMPORTANT CONCEPTS
+=================== SPECIAL FEATURES ===================
 
-This header has a number of important concepts and processes to understand
+The header is planned to sport a number of special features which aid inexperienced scripters in the creation of custom weapons and items generated and used by the player. The header automatically handles many of the tedious tasks which must be done when handling weapons including updating stuff like collision data and pausing the weapons while the header is paused. Packaged with the header is a variety of commonly-used movement functions.
 
-Ghosting: The act of using a weapon as a "puppet" of sorts.
-Most LWeapons created with this header have no collision detection and do not harm enemies directly - they rely on "hitting" LWeapons that they spawn when colliding with enemies to do damage. This makes it so they don't instantly die when they hit enemies and don't require constant DeadState setting to penetrate enemies. It also makes things like damage handling easier.
-To stop ghosted weapons from breaking if their Collision detection is set to true, all ghosted weapons have their Collision Detection set to false every frame if set true by something. Another notable feature is that, internally, all ghosted weapons move based off angles rather than directions - Their Direction is normally set based off their angle.
-On addition, all Ghosted LWeapons have a cooldown variable. This is done to slow down the production of excessive hitting weapons on NPCs that are shielded.
-Some ghosted weapons manipulate Link's sprite. The only Ghost Weapon scripts that should be manipulating Link's sprite are the FFC scripts associated with it. Sprite manipulation requires the use of Link->DrawOffset, which can conflict with other scripts. Currently a way of Link sprite manipulation without potentially clashing with other scripts is being planned for this header.
+The header planned to be include a buffer system. Using a large array, the end user can store the data for a number of weapons and then generate copies of them later when needed.
+
+On addition to the basic animation weapons have, it is planned for you to define animation rules for a weapon when you call the SpiritLW_Animate() function using specially designed arrays.
+The arrays should be formatted like this when called:
+int AnimationArray[] = {tile1, tile2, tile3...};
+They can also be defined in the function as array literals.
+
+For more advanced scripters who might be more comfortable with how ZScript works, there is plenty of space for expanding the header's features by adding more movement types, lifepsan types, etc. The header is also designed in a way in which slotting them in is quick and easy and even accessible to inexperienced scripters.
 
 
-Slot: A chunk of data corresponding to one whole entity in any of the Ghost Weapon arrays.
-	In GhostWeaponExpVars[]:
-		Slot starts at 1 instead of 0 and their legal values are between 1 and MAX_LWEAPONS+1. In most cases, these are the legal values to be passed to the slot arg when using functions that access GhostWeaponExpVars[]. In some cases you can pass 0 in the slot arg, but that instead does a different thing like reading or setting the GHOSTLW_NUM_MISC_EXVARS. Read the functions for more details.
-			Internally, they are between 0 and MAX_LWEAPONS, but they are listed as between 1 and MAX_LWEAPONS+1 when using functions that manipulate variables due to how the weapon UIDs are set, and to make for a stable means of accessing the GHOSTLW_NUM_MISC_EXVARS in some functions.
-		The first variable in a slot is the UID of the scripted LWeapon on the screen and is used to tie the weapons to the script. Unless you know what you are doing, DON'T set this manually - it is automatically set by the scripts running this header. Setting it manually can break things if you don't know what you are doing.
-			Legal indicies for UIDs on ghosted weapons are the same as slots; between 1 and MAX_LWEAPONS+1.
-		The last two data entries in each slot of GhostWeaponExpVars[] are internal Work variables, used to help it process movement types. I recommend against setting these unless you write new movement functions.
+
+=================== ANATOMY OF A SPIRIT WEAPON SCRIPT ===================
+
+
+A Spirit Weapon script has a basic anatomy which clearly outlines where to slot the components of your script into. There are four clearly defined components of the script weapon anatomy, defined in the following example.
+
+The following example script is a fully functional Spirit Weapon script, stripped down to its bare bones. The comment blocks detail each component of the script
+Example script:
+lweapon script ExampleWeapon{
+	void run(){ 
+		/*
+		START
+		At the beginning of the script, after void run() and before the body of the script. Declare your working variables here as well as any counters you need to use and anything else that happens when the script is assigned.
+		*/
+		while(Spirit_IsAlive(this)){
+			/*
+			BODY
+			Run the stuff the weapon does during the time the script runs. This includes stuff that is run in loops, which you will always need when running a Spirit Weapon script.
+			The condition in the loop can be anything. You can make it so the loop ends after 120 frames. However, it is highly advisable that 
+			*/
 		
-	In GhostWeaponBuffer[]:
+			/*
+			UPDATE
+			Directly before Spirit_Waitframe in any given loop that is needed to run for more than a frame, you put stuff that needs to be updated every frame of the loop
+			"Spirit_Waitframe(this)" can be replaced with a custom Waitframe function that also calls Spirit_Waitframe at the end if necessary. Remember to also pass this weapon's pointer through as well!
+			*/
+			Spirit_Waitframe(this);
+		}
+		/*
+		Note:
+		You can run several different loops in a spirit LWeapon script before the weapon is to die. If they are to persist more than a frame, they also need Spirit_Waitframe and, if necessary, other updates to be run
+		*/
+		
+		if(!Spirit_IsAlive(this)){
+			/*
+			DEATH
+			Run effects that occur after the weapon is set to die. This can occur without having flagged the weapon as dead (or having used Spirit_Kill()) if omit the conditional but it is highly recommended that you use it because it allows for other scripts to detect that the weapon has died.
+			In order for these to come into effect, the weapon must also still be valid after death.
+			*/
+		}
+	}
+}
+
+
+
+=================== IMPORTANT CONCEPTS ===================
+
+This header has a number of important concepts and processes planned to be in this header. It is important to understand these
+
+Spiriting: The act of using a weapon as a "puppet" of sorts.
+	LWeapons created with this header have no collision detection - they rely on "hitting" LWeapons that they spawn when colliding with enemies to do damage. This makes it so they don't instantly die when they hit enemies and don't require constant DeadState setting to penetrate enemies. It also makes things like damage handling easier. Currently they don't collide with anything as of yet - it is still being worked on.
+	To stop Spirited weapons from breaking if their Collision detection is set to true, all Spirited weapons have their Collision Detection set to false every frame if set true by something. Another notable feature is that all Spirited weapons move based off angles rather than directions - Their Direction is normally set based off their angle.
+	On addition, all Spirited LWeapons have a cooldown variable. This is done to slow down the production of excessive blocking sounds on NPCs that are shielded or blocked them.
+
+Slot: A chunk of data corresponding to one whole entity in any of the Spirit Weapon arrays.
+	In SpiritWeaponBuffer[]:
 		Functionality has not been implemented yet
-		
-	In GhostWeapon_CustomDefenses[]:
-		Functionality has not been implemented yet
 
-		
-Death: The Ghosted LWeapon dies
-Ghosted LWeapons die in one of a few ways; through collision with enemies, when their Lifespan is over, when they hit a combo that blocks them or moving offscreen (unless the appropriate flag is set). When they die, they can produce a Death Effect if the weapon's Death Effect settings were set prior to death. Upon death, the weapon vanishes and its data cleared
-	Ghosted LWeapons can have "lives" which let you control how many times it can die, producing death effects before vanishing if set before death.
-The following are the supported death criteria:
-	Hitting an NPC. Weapon is removed afterwards.
-		If LWF_PENETRATE is set AND the NPC is not blocking it with a shield, this death criteria is ignored.
-		If no lifespan is set (or EWL_ONHIT is set) is set and a Death Effect is also set, this triggers death effects.
-	End of lifespan. Weapon dies. If has additional lives, the weapon does not get removed.
-	Hitting a combo that blocks the weapon. Weapon is removed.
-		If LWM_THROW is set and LWM_THROW_FLAG_BOUNCE are set or LWM_WALLBOUNCE is set, the weapon only bounces off the block combo instead of being removed.
-	Going offscreen. Weapon is removed without producing death effects.
-		If LWF_MOVEOFFSCREEN is set, this only occurs if the weapon travels beyond 1 screen length away from the screen boundary
-		If a weapon dies offscreen, it produces no death effects.
-		Setting their X to -64 or 320 or their Y to -64 or 242 or using the Remove() function from std.zh are the only ways to instantly kill any Ghosted LWeapon regardless of settings.
+Death: The spirited LWeapon's script is set to end. This does not mean it is removed, nor does removing it automatically causes any of its death effects to occur.
+	Spirited LWeapons die when they are set to die; usually when Spirit_Kill() is called. This usually ends the script afterwards and triggers death effects, but...
+	Spirited LWeapons can be revived; through calling Spirit_Revive(). This can be done to give the weapon an illusion of "lives", requiring several Spirit_Kill() calls to finally kill it or it can be done to cause it to do different things after killing it. There is no limit to the number of times you revive a spirited LWeapon, as long as it is not after all loops that require it to be alive.
 
 
-"Left" and "Right" sides of variables.
-Some of the FFC and Item scripts have their D args split into two; a "Left" side and the "Right" side. This means they use both the non-decimal and the decimal components of each D arg as args as opposed to the two being combined; being able to squeeze out up to 16 integers out of the 8 D args on the FFC or Item.
-	The "Left" side of an arg corresponds to their non-decimal value. You treat this side like a regular integer number and normal rules apply to it.
-	The "Right" side of an arg corresponds to their decimal value. This MUST be 4 digits long, including the 0s in front of the number, or the number you input will not be saved as the number you input. Be sure to double-check if the number you input is saved as is to avoid potential bugs.
-	You can also do this with floats to store more than 1 int in the number. This is useful for returning more than 1 number at a time without using arrays.
-
-GhostLW_* vars.
-To get around the limitation of 16 Misc vars, Ghosted LWeapons read a large majority of their information from a giant array stored in the main GhostWeapon file. Using one Misc var to connect the weapon to this array, this effectively expands the number of Misc Vars available to the weapon. Because this array is so big and relies on Slots reserved for each LWeapon, reading and setting them in a way that is intuitive and practical requires the usage of specialized functions, namely the Get/SetGhostLWData functions and co. (the most frequently used is Get/SetGhostLWData). Some key aspects to these weapons like its position must be read or set in this manner, as they are handled differently to how ZC normally handles them.
-	Reading GhostLW_X, GhostLW_Y, GhostLW_Z and GhostLW_Jump returns numbers 100x higher than their actual values as on the screen and likewise setting them requires you to set their values to 100x of what you would normally set them to. This is done to allow for the header to manually perform accurate movement down to 100ths of a pixel and to reduce the impact of truncation errors (crucial when dealing with things like sine wave movement). When setting and reading these on an existing ghosted weapon, you may opt to instead use alternative functions that converts their standard position to their ghosted position. As caveat, said functions are capped at 2146 and -2146 as opposed to 214747 and -214747 as to avoid overflowing or underflowing the integer.
-	If you have extra things you want to keep track of on the weapon via this header, I recommend using free slot indicies from this array as opposed to using the remaining Misc vars - Other scripts may need them!
-
------------------------------------------
-SCRIPTS
+=================== SCRIPTS ===================
 
 The list of scripts that come with the header.
 
------------------------------------------
-FireWeapon
-Item script, Action slot.
-
-Args:
-D0 is left blank for compatibility with the Item Pickup script
-D1 (Left): Sprite
-D1 (Right): Damage
-D2 (Left): Step speed
-D2 (Right): Weapon Defense
-D3 (Left): Resource needed.
-D3 (Right): Resource cost
-D4 (Left): Combo Flag trigger
-D4 (Right): Interacts with Combo Type
-D5 (Left): How it interacts with combo type
-D5 (Right): Hit Effect
-D6 (Left): Hit Effect Arg1
-D6 (Right): Hit Effect Arg2
-D7 (Left): Weapon Flags
-D7 (Right): Error SFX, played when you don't have enough of a resource to use the item.
------------------------------------------
-Fires a simple, but customizable, LWeapon in a straight line.
-
------------------------------------------
-FireBomb
-Item script, Action slot.
-
-Args:
-D0 is left blank for compatibility with the Item Pickup script
-D1 (Left): Sprite
-D1 (Right): Bomb type. 0 for regular, 1 for Super. Add 2 to use the Radial version of the explosions
-D2 (Left): Step speed
-D2 (Right): Movement Type
-D3 (Left): Movement Arg1
-D3 (Right): Movement Arg2
-D4 (Left): Lifespan Type
-D4 (Right): Lifespan Arg1
-D5 (Left): Lifespan Arg2
-D5 (Right): Lives
-D6 (Left): Weapon Flags.
-D6 (Right): Error SFX.
-D7 (Left): None
-D7 (Right): None.
------------------------------------------
-Fires (or throws) a bomb in Link's direction.
 
 
 
-
------------------------------------------
-GLOBAL FUNCTIONS
+=================== GLOBAL FUNCTIONS ===================
 
 Place these in the Global script
 
------------------------------------------
-void GhostWeapon_Update();
-
-Location: GhostWeapon.zh
------------------------------------------
-
-Runs the main update routines.
-Place this in the Global script before Waitdraw();
-
-
------------------------------------------
-void GhostWeapon_Start();
-
-Location: GhostWeapon.zh
------------------------------------------
-
-Clears all Ghost Weapon and buffer data before anything is run.
-Place this in the Global script after void run() and before the main loop.
+There are no global functions included as of now
 
 
 
------------------------------------------
-LWEAPON FUNCTIONS
+=================== LWEAPON FUNCTIONS ===================
 
-These set up things related to LWeapons and LWeapon data
+These set up and manage things related to LWeapons and LWeapon data
 
------------------------------------------
-void SuspendGhostLWeapon();
 
------------------------------------------
-Suspends all GhostedLWeapon activity.
+
++---------------------------------------+
+lweapon Spirit_CreateWeapon(int type, int wscript, int weaponD, int parent, int x, int y, int damage, int step, int angle, int sprite, int sfx, int flags);
+
+Args:
+type: The type of weapon to create
+wscript: The weapon script to assign to the script
+weaponD: The weapon script's D args. Pass an array into this arg.
+parent: The ID of the weapon's parent item. Set to -1 if not using a parent item.
+x: X position to create at.
+y: position to create at.
+damage: Weapon's Damage.
+angle: The weapon's movement angle.
+speed: How fast the weapon moves, in 100ths of a pixel per frame.
+sprite: The sprite the weapon uses.
+sfx: The SFX played when the weapon is created
+flags: The weapon's flags.
+	Currently, none are set
++---------------------------------------+
+Creates and sets up a Spirited LWeapon with basic movement properties.
+Additional properties are set through the appropriate actions.
+
+
++---------------------------------------+
+void Spirit_Suspend();
+
++---------------------------------------+
+Suspends all SpiritWeapon activity.
 Call this whenever you would want the header's activity to be suspended; including at any time you wish to freeze the screen.
 It is highly recommended that you insert this function call into any functions that freeze the screen.
 
 
------------------------------------------
-void ResumeGhostLWeapon();
++---------------------------------------+
+void Spirit_Resume();
 
------------------------------------------
-Resumes all GhostedLWeapon activity.
++---------------------------------------+
+Resumes all SpiritWeapon activity.
 Call this whenever you would want the header's activity to resume; including at any time you wish to unfreeze the screen.
 It is highly recommended that you insert this function call into any functions that unfreeze the screen.
-Note: This also reloads the GhostLWeapon slots, just in case any ghosted weapons die or are removed while the header is suspended.
 
 
------------------------------------------
-void CreateGhostLWeapon(int x, int y, int damage, int defense, int angular, float direction, int speed, int sprite, int sound, int trigger, int combo, int comboarg, int flags);
++---------------------------------------+
+void Spirit_ToggleSuspend();
 
-Args:
-x: X position to create at.
-y: position to create at.
-damage: Weapon's Damage.
-defense: Which Defense the weapon hits.
-angular: Wherever the weapon uses angular movement or not
-direction: Varies depending on wherever angular is 0 or 1
-	If angular is 0: The cardinal direction the weapon moves in. Use the DIR_ constants for this
-	If angular is 1: The angle, in radians, at which the weapon moves in. If you want it to be in degrees, use the DegtoRad() function in std.zh to convert your degree angle into radians for this function.
-speed: How fast the weapon moves, in 100ths of a pixel per frame.
-sprite: The sprite the weapon uses.
-sound: The sound played when firing the weapon
-trigger: The Inherrent secret flag the weapon triggers
-combo: The combo type the weapon interacts with
-comboarg: How the weapon interacts with the combo type
-flags: The weapon's flags.
-	Currently, none are set
------------------------------------------
-Creates and sets up a ghosted LWeapon with basic movement properties.
-Additional properties are set through the appropriate actions
++---------------------------------------+
+Toggles the suspension setting on and off.
 
 
------------------------------------------
-void SetGhostLWeaponDeathEffect(lweapon weapon, int type, int arg1, int arg2, int arg3, int sound);
-SetGhostLWeaponDeathEffect(lweapon weapon, int type, int arg1, int arg2, int arg3);
++---------------------------------------+
+bool Spirit_IsSuspended();
 
-weapon = LWeapon passed.
-type = Death type.
-arg1-3 = Args.
-sound = SFX to play when weapon dies
------------------------------------------
-Sets a Ghosted Weapon's Death Effect.
-
-Weapon death types
-LWD_NONE - No death effect.
-	Args do nothing.
-LWD_EXPLODE - Weapon leaves an explosion.
-	arg1 - Explosion type. 0 = Normal, 1 = Super.
-	arg2 - Explosion damage.
-LWD_EXPLODERADIAL - Similar to the first explosion type, except it checks in a radius from the weapon's center to inflict damage instead of the standard ZC explosion box. The explosion will also only damage for one frame instead of for however many with ZC standard explosion.
-	arg1 - Explosion type. 0 = Normal, 1 = Super.
-	arg2 - Explosion damage.
-	arg3 - Damage scaling. 0 to produce flat damage values. 1 for damage to be based on distance from explosion center (ranging from *2 damage if very close to *0.5 if on the outer edges of the explosion). 
-LWD_SPAWN - Weapon spawns more weapons.
-	arg1 - ID of weapon in buffer
-	arg2 - Number of weapons to spawn
-	arg3 - Spread setting
-LWD_REPLACE - Same as Spawn, but the original weapon is removed. Overrides LWeapin_Lifespan_Lives
-LWD_RUNSCRIPT - Weapon loads an FFC and runs a script. Only one weapon may run an FFC script at a time - If multiple weapons would run an FFC script on the same frame, their script usage is queued up for use on the next available oppoturnity.
-	arg1 - Script ID to run
-	arg2 - Does nothing
-	arg3 - Does nothing
++---------------------------------------+
+Returns true if the header is suspended.
 
 
------------------------------------------
-bool IsGhostLWeapon(lweapon weapon);
++---------------------------------------+
+bool Spirit_IsAlive(lweapon weapon);
 
 weapon = LWeapon passed
------------------------------------------
-Returns wherever weapon is a weapon controlled by GhostWeapon.zh
++---------------------------------------+
+Returns true if the Spirit Weapon is alive or not.
 
 
------------------------------------------
-bool GhostLWCollision(lweapon weapon, npc target);
-GhostLWCollision(npc target, lweapon weapon);
-GhostLWCollision(lweapon weapon, eweapon target);
-GhostLWCollision(eweapon target, lweapon weapon);
++---------------------------------------+
+void Spirit_Kill(lweapon weapon);
+
+weapon = LWeapon passed
++---------------------------------------+
+Kills a scripted weapon
+
+
++---------------------------------------+
+void Spirit_Revive(lweapon weapon);
+
+weapon = LWeapon passed
++---------------------------------------+
+Revives a dead scripted weapon
+
+
++---------------------------------------+
+bool IsSpiritLWeapon(lweapon weapon);
+
+weapon = LWeapon passed
++---------------------------------------+
+Returns wherever weapon is a weapon controlled by SpiritWeapon.zh
+
+
++---------------------------------------+
+!Temporary; until it arrives in std.zh!
+lweapon RunLWeaponScript(int ID, int scriptNum, untyped args);
+
+Args:
+ID: The ID of the weapon to create
+scriptNum: The number of the LWeapon script to assign to the weapon
+args: An array containing the args to apply to the weapon script's D vars.
++---------------------------------------+
+Creates an LWeapon and assigns a script and its D args to it.
+Called internally by Spirit_CreateWeapon();
+
+
++---------------------------------------+
+!Temporary; until it arrives in std.zh!
+bool FixedCollision(lweapon weapon, npc target);
+FixedCollision(npc target, lweapon weapon);
+FixedCollision(lweapon weapon, eweapon target);
+FixedCollision(eweapon target, lweapon weapon);
 
 weapon = LWeapon passed. Must be one of the two args
 target = Targeted pointer. Must one of the args and it currently must be be either an NPC or an EWeapon
------------------------------------------
-Returns if the hitbox of LWeapon weapon overlaps with that of target pointer. An optimized version of the Collision function from std.zh, optimized to be more accurate.
-Note: This doesn't actually check to see if a ghosted LWeapon has been passed. You can freely use this function in non-GhostLWeapon scripts if you so wish to, but you are probably better off using a version of this function with a more all-purpose name outside of GhostLWeapon scripts in case this function changes.
-
-
------------------------------------------
-void KillGhostLWeapon(lweapon weapon, bool overridelives, bool canceleffect);
-KillGhostLWeapon(lweapon weapon);
-
-weapon = LWeapon passed.
-overridelives = If set to true, removes the weapon regardless of remaining lives.
-canceleffect = If set to true, skips death effects.
------------------------------------------
-Kills a Ghosted LWeapon and optionally removes it regardless of remaining lives and/or skips its death effect.
-Its overload is just a more succinct way of simply killing the LWeapon - It can't ignore lives or skip the death effect.
++---------------------------------------+
+Exactly the same as the existing FixedCollision Function.
+Note: This doesn't actually check to see if a Spirited LWeapon has been passed. You can freely use this function in non-SpiritLWeapon scripts if you so wish to, but you are probably better off using a version of this function with a more all-purpose name outside of SpiritLWeapon scripts in case this function changes.
 
 
 
------------------------------------------
-DEBUG FUNCTIONS AND SCRIPTS
+-=-=-=-=-=-=-=- ANIMATION -=-=-=-=-=-=-=-
+
+The following functions set up special animations for the weapons
+
+There are currently no animation functions as of yet. There are planned to be though
+
+
+
+-=-=-=-=-=-=-=- MOVEMENT -=-=-=-=-=-=-=-
+
+The following functions grant the Spirited weapon movement types.
+In order to use these functions, you must first supply an array of at least the specified size into the work argument. This array contains the variables the function uses for working the movement and provides you a way to read these vars from outside the function and, eventually, communicate with other scripts.
+
+
++---------------------------------------+
+void Spirit_Move_Veer(lweapon spirit, float work[3], float acc, int angle);
+
+spirit: LWeapon passed.
+work[3]: An array containing the variables the movement type needs to work. You must supply an array of at least size 3 here.
+	0: Current acceleration level, in 100ths of a pixel per frame.
+	1: Working variable that is applied to the weapon's X movement.
+	2: Ditto, but for the weapon's Y movement.
+acc: Step Speed at which the weapon accelerates in. 100 = 1 pixel per frame (you probably don't want it this high unless you know what you are doing)
+angle: The direction in which the weapon accelerates in, in degrees.
++---------------------------------------+
+
+Causes the weapon to accelerate at an angle.
+
+
++---------------------------------------+
+void Spirit_Move_Drift(lweapon spirit, float work[2], float step, int angle);
+
+spirit: LWeapon passed.
+work[2]: An array containing the variables the movement type needs to work. You must supply an array of at least size 2 here.
+	0: Working variable that is applied to the weapon's X movement.
+	1: Ditto, but for the weapon's Y movement.
+step: Step Speed at which the weapon drifts at. 100 = 1 pixel per frame.
+angle: The direction in which it is drifting in, in degrees.
++---------------------------------------+
+
+Causes the weapon to drift at an angle.
+
+
++---------------------------------------+
+void Spirit_Move_Sine(lweapon spirit, float work[3], float amp, float initangle, float angle);
+
+spirit: LWeapon passed.
+work[3]: An array containing the variables the movement type needs to work. You must supply an array of at least size 3 here.
+	0: The current angle.
+	1: Working variable that is applied to the weapon's X movement.
+	2: Ditto, but for the weapon's Y movement.
+amp: The overall amplitude the sine wave moves at
+initangle: The initial angle. Set to 90 to produce a Cosine wave.
+angle: The angular frequency, in degrees, per frame.
++---------------------------------------+
+
+Causes the weapon to move in a sine wave.
+Orithan's note: I have no idea how to Sine Wave x.x . I had to lift the functional components for this out of Ghost.zh and I have no idea how to get it to play properly with other movement types. Maybe I will get it eventually
+
+
++---------------------------------------+
+!INCOMPLETE!
+void Spirit_Move_Bounce(lweapon spirit, float work[3 or 4], float initjump, float jumpdecay, float stepdecay);
+
+spirit: LWeapon passed.
+work[3 or 4]: An array containing the variables the movement type needs to work. You must supply an array of at least size 3 if not using the Fake Z Axis setting or 4 if you are using it.
+	0: The weapon's current Jump factor. This is applied to the weapon's Z position (or Y if Fake Z is used) and then decremented by gravity every frame.
+	1: The stored upward velocity, adjusted each time the weapon bounces.
+	2: The current bounce number. This does nothing in the weapon itself beyond the first bounce - it is an easy way for the user to read the number of bounces the weapon has made.
+	Only if you use the Fake Z Axis setting:
+	3: The weapon's fake Z value.
+initjump: The weapon's initial vertical velocity
+jumpdecay: The amount taken from the weapon's initial vertical velocity each bounce.
+stepdecay: The amount of step speed taken from the weapon each bounce.
++---------------------------------------+
+
+Causes the weapon to bounce in a line. This is currently functional but incomplete. I advise against using this movement type until a later build when its functionality is completed.
+
+
++---------------------------------------+
+!NON-FUNCTIONAL!
+void Spirit_Move_Orbit(lweapon spirit, float work[3], int orbit, int increment);
+
+spirit: LWeapon passed.
+work[3]: An array containing the variables the movement type needs to work. You must supply an array of at least size 3 here.
+	0: The current angle.
+	1: Working variable that is applied to the weapon's X movement.
+	2: Ditto, but for the weapon's Y movement.
+amp: The overall amplitude the sine wave moves at
+initangle: The initial angle. Set to 90 to produce a Cosine wave.
+angle: The angular frequency, in degrees, per frame.
++---------------------------------------+
+
+Causes the weapon to orbit around a given point. This is currently non-functional as of now - it's just a function call at this point.
+
+
+
+-=-=-=-=-=-=-=- DEATH -=-=-=-=-=-=-=-
+
+The following functions produce special death effects, which are played when the weapon dies.
+
+There are currently no death functions as of yet.
+
+
+
+=================== DEBUG FUNCTIONS AND SCRIPTS ===================
 
 These run debugging stuff. These can slow the script right down, so you should probably use them only when debugging.
-Enable these by setting GHOSTLW_SETTING_PRINTERRORS to 1.
+Enable these by setting SPIRITLW_SETTING_PRINTERRORS to 1.
 
------------------------------------------
-
------------------------------------------
-void GhostWeapon_PrintErrorMSG(int category, int type, int a1, int a2, int a3, int a4);
-GhostWeapon_PrintErrorMSG(int category, int type, int a1, int a2, int a3);
-GhostWeapon_PrintErrorMSG(int category, int type, int a1, int a2);
-GhostWeapon_PrintErrorMSG(int category, int type, int a1);
-GhostWeapon_PrintErrorMSG(int category, int type);
-
-Args
-category: Script error "family".
-type: Type of error in category "family"
-a1-a4: Different args. Currently only a1 is used.
------------------------------------------
-A library of error messages to log to Allegro.log.
-This only REPORTS errors, and doesn't check for them. You have to do the checking yourself.
-Current index of errors
-category 0: Failed to create ghosted weapon
-	type: 0 - "Error: Failed to create ghosted weapon (Slot a1 is not free)"
-	type: 1 - "Error: Failed to create ghosted weapon (Slot a1 does not exist)"
-	type: 2 - "Error: Failed to create ghosted weapon (No available slots)"
-	type: 3 - "Error: Failed to create ghosted weapon (LWeapon passed is not LW_GHOST)"
-	type: 4 - "Error: Failed to create ghosted weapon (Maximum number of LWeapons already on screen)"
-category 1: Failed to load ghosted weapon
-	type: 0 - "Error: Failed to load ghosted weapon (Weapon data for slot a1 is not valid)"
-	type: 1 - "Error: Failed to load ghosted weapon (Slot a1 is not a valid slot)"
-	type: 2 - "Error: Failed to load ghosted weapon (LWeapon passed is not LW_GHOST)"
-	type: 3 - "Error: Failed to load ghosted weapon (LWeapon passed is not assigned as a ghosted weapon)"
+No functions of the type are implemented as of yet
 
 
 -----------------------------------------
@@ -307,58 +348,15 @@ MISCELLANEOUS FUNCTIONS
 
 A catch all collection of functions that don't fit anywhere else
 
------------------------------------------
-int GetGhostLWData(int slot, int index);
-GetGhostLWData(lweapon weapon, int index);
+----------------------------------------
+int DirAngle8(int Dir);
 
-Args
-slot: Slot to retrieve the data from. If it is 0, it instead retrieves data from the miscellaneous Ghosted Weapon variables
-weapon: Scripted weapon to get the slot number from.
-index: Index of variable you want to look at.
------------------------------------------
-Returns the value of a Ghosted weapon variable in slot slot; through either reading the slot of an existing ghosted weapon or by reading out of a slot directly.
+Args:
+Dir: One of the 8 orthogonal directions (use the DIR_ constants)
 
-
------------------------------------------
-int GetGhostLWDataLocation(int slot, int index);
-GetGhostLWDataLocation(lweapon weapon, int index);
-
-Args
-slot: Slot to retrieve the data location from. If it is 0, it instead retrieves the data location of a miscellaneous Ghosted Weapon variable
-weapon: Scripted weapon to to get the data location from.
-index: Which index of the slot you want to retrieve the data location from.
------------------------------------------
-Returns the location of a Ghosted weapon variable in slot slot of GhostWeaponExpVars[]; through either reading the slot of an existing ghosted weapon or by reading out of a slot directly.
-
-
------------------------------------------
-void SetGhostLWData(int slot, int index, int value);
-void SetGhostLWData(lweapon weapon, int index, int value);
-
-Args
-slot: Slot to set the data in. If it is 0, it instead sets data in the miscellaneous Ghosted Weapon variables
-weapon: Scripted weapon to set the variable of.
-index: Index of variable you want to set.
------------------------------------------
-Sets a ghosted weapon variable in slot slot; through either reading the slot of an existing ghosted weapon or by reading out of a slot directly.
+Takes one of the 8 orthogonal direction and returns the angle it corresponds to. The angle returned is in degrees.
 
 ----------------------------------------
-int GhostWeapon_StripDecimal(float arg);
-
-Args
-arg: Number to take.
-----------------------------------------
-Rounds a number down; stripping the decimal from a variable, returning the result.
-This function exists in other headers. This is given a different name as to prevent this header from clashing with those headers.
-
-----------------------------------------
-int GhostWeapon_DecimalToInt(float arg);
-
-Args
-arg: Number to take
-----------------------------------------
-Returns the decimal portion of a float as an integer.
-This function exists in other headers. This is given a different name as to prevent this header from clashing with those headers.
 
 
 -----------------------------------------
@@ -366,6 +364,8 @@ INTERNAL STUFF (This goes in a different file)
 
 A library of internal functions that handle the behind the scenes stuff. Use these with caution and do not mess with them unless you know what you are doing.
 These may be changed or removed in future versions without warning. You have been warned.
+
+No functions of this type are defined
 
 -----------------------------------------
 
