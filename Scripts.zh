@@ -1,0 +1,165 @@
+//Utility FFC and item scripts
+
+//Fires a basic and customizable weapon; which flies in a straight line.
+//D0 is left blank for compatibility with the Item Pickup script. This is so the Item Pickup script can use two args instead of 1
+//D1 (Left): Sprite
+//D1 (Right): Damage
+//D2 (Left): Step
+//D2 (Right): Weapon Defense
+//D3 (Left): Resource needed
+//D3 (Right): Resource cost
+//D4 (Left): Combo Flag trigger
+//D4 (Right): Interacts with Combo Type
+//D5 (Left): How it interacts with combo type
+//D5 (Right): Hit Effect
+//D6 (Left): Hit Effect Arg1
+//D6 (Right): Hit Effect Arg2
+//D7 (Left): Weapon Flags
+//D7 (Right): Error sound
+item script FireWeapon{
+	void run(int foo, int Sprite_Damage, int Step_Defense, int Resource_Cost, int Trigger_Combo, int Arg_HitEffect, int HitArg1_HitArg2, int Flags_Error){
+//		if(GHOSTLW_GLOBAL[GHOSTLW_GLOBAL_SUSPEND] == 1){
+//			Quit();
+//		}
+		//Split the variables. I wish there was a way to quickly do this...
+		int Sound = this->UseSound;
+		int Sprite = GhostWeapon_StripDecimal(Sprite_Damage);
+		int Damage = this->Power*2;
+//		int Damage = GhostWeapon_DecimalToInt(Sprite_Damage);
+		int Step = GhostWeapon_StripDecimal(Step_Defense);
+		int Defense = GhostWeapon_DecimalToInt(Step_Defense);
+		int Resource = GhostWeapon_StripDecimal(Resource_Cost);
+		int Cost = GhostWeapon_DecimalToInt(Resource_Cost);
+		int Trigger = GhostWeapon_StripDecimal(Trigger_Combo);
+		int ComboType = GhostWeapon_DecimalToInt(Trigger_Combo);
+		int ComboArg = GhostWeapon_StripDecimal(Arg_HitEffect);
+		int HitEffect = GhostWeapon_DecimalToInt(Arg_HitEffect);
+		int HitArg1 = GhostWeapon_StripDecimal(HitArg1_HitArg2);
+		int HitArg2 = GhostWeapon_DecimalToInt(HitArg1_HitArg2);
+		int Flags = GhostWeapon_StripDecimal(Flags_Error);
+		int Error = GhostWeapon_DecimalToInt(Flags_Error);
+		
+		if(Resource == CR_MAGIC){ //If it is Magic; alter cost to make it respect the Half Magic upgrade.
+			float drainrate = Game->Generic[GEN_MAGICDRAINRATE]/2;
+			Cost *= drainrate;
+		}
+		
+		if(Screen->NumLWeapons() < MAX_LWEAPONS){ //Make sure there is room for the new LWeapon to spawn
+			if(Game->Counter[Resource] >= Cost){
+				Link->Action = LA_ATTACKING;
+				lweapon weapon = CreateGhostLWeapon(Link->X, Link->Y, Damage, Defense, Link->Dir, Step, Sprite, Sound, Trigger, ComboType, ComboArg, Flags);
+				if(Game->Counter[Resource] == Cost){ //Stop potential underflow.
+					Game->Counter[Resource] = 0;
+				}
+				else{
+					Game->Counter[Resource] -= Cost;
+				}
+			}
+			else{
+				Game->PlaySound(Error);
+			}
+		}
+		else{ //Already 256 LWeapons, print error message.
+			Game->PlaySound(Error);
+			GhostWeapon_PrintErrorMSG(0, 4);
+		}
+	}
+}
+
+
+item script FireBomb{
+	void run(int foo, int Sprite_Type, int Step_Move, int MovArg1_MoveArg2, int Lifespan_LifespanArg1, int LifespanArg2_Lives, int Flags_Error){
+//		if(GHOSTLW_GLOBAL[GHOSTLW_GLOBAL_SUSPEND] == 1){
+//			Quit();
+//		}
+		//Split the variables. I wish there was a way to quickly do this...
+		int Sound = this->UseSound;
+		int Damage = this->Power*2;
+		int Defense = 0;
+		int Trigger = 0;
+		int Resource = 0;
+		int Cost = 1;
+		int Sprite = GhostWeapon_StripDecimal(Sprite_Type);
+		int Type = GhostWeapon_DecimalToInt(Sprite_Type);
+		int Step = GhostWeapon_StripDecimal(Step_Move);
+		int Move = GhostWeapon_DecimalToInt(Step_Move);
+		int MoveArg1 = GhostWeapon_StripDecimal(MovArg1_MoveArg2);
+		int MoveArg2 = GhostWeapon_DecimalToInt(Abs(MovArg1_MoveArg2));
+		int Lifespan = GhostWeapon_StripDecimal(Lifespan_LifespanArg1);
+		int LifespanArg1 = GhostWeapon_DecimalToInt(Lifespan_LifespanArg1);
+		int LifespanArg2 = GhostWeapon_StripDecimal(LifespanArg2_Lives);
+		int Lives = GhostWeapon_DecimalToInt(LifespanArg2_Lives);
+		int Flags = GhostWeapon_StripDecimal(Flags_Error);
+		int Error = GhostWeapon_DecimalToInt(Flags_Error);
+		if(Type == 1){
+			Resource = CR_SBOMBS;
+			Defense = NPCD_SBOMB;
+			Trigger = CF_SBOMB;
+		}
+		else{
+			Resource = CR_BOMBS;
+			Defense = NPCD_BOMB;
+			Trigger = CF_BOMB;
+		}
+		
+		if(Screen->NumLWeapons() < MAX_LWEAPONS){ //Make sure there is room for the new LWeapon to spawn
+			if(Game->Counter[Resource] >= Cost){
+				Link->Action = LA_ATTACKING;
+				lweapon weapon = CreateGhostLWeapon(Link->X, Link->Y, 16, Damage, Defense, Link->Dir, Step, Sprite, Sound, Trigger, -1, -1, Flags);
+				SetGhostLWData(weapon, GhostLW_Jump, 2);
+				SetGhostLWeaponMovement(weapon, Move, MoveArg1, MoveArg2);
+				SetGhostLWeaponLifespan(weapon, Lifespan, LifespanArg1, LifespanArg2, Lives);
+				SetGhostLWeaponDeathEffect(weapon, LWD_EXPLODE, Type, Damage, -1);
+				if(Game->Counter[Resource] == Cost){ //Stop potential underflow.
+					Game->Counter[Resource] = 0;
+				}
+				else{
+					Game->Counter[Resource] -= Cost;
+				}
+			}
+			else{
+				Game->PlaySound(Error);
+			}
+		}
+		else{ //Already 256 LWeapons, print error message.
+			Game->PlaySound(Error);
+			GhostWeapon_PrintErrorMSG(0, 4);
+		}
+	}
+}
+
+item script SetAction{
+	void run(int action){
+		Link->Action = action;
+		Trace(Link->Action);
+	}
+}
+
+item script DEBUG_FreezeUnFreeze{
+	void run(){
+		Link->Action = LA_ATTACKING;
+		if(GHOSTLW_GLOBAL[GHOSTLW_GLOBAL_SUSPEND] == 0){
+			SuspendGhostLWeapon();
+		}
+		else if(GHOSTLW_GLOBAL[GHOSTLW_GLOBAL_SUSPEND] == 1){
+			ResumeGhostLWeapon();
+		}
+	}
+}
+
+//Modified versions of the (un)freezeScreen functions in stdExtra.zh. These are modified to also suspend Ghosted LWeapons.
+void GhostLWfreezeScreen(){
+	SuspendGhostLWeapon();
+	ffc freezeAll = Screen->LoadFFC(FFC_FREEZEALL);
+	freezeAll->Data = CMB_FREEZEALL;
+	ffc freezeFFC = Screen->LoadFFC(FFC_FREEZEFFC);
+	freezeFFC->Data = CMB_FREEZEFFC;
+}
+
+void GhostLWunfreezeScreen(){
+	ResumeGhostLWeapon();
+	ffc freezeAll = Screen->LoadFFC(FFC_FREEZEALL);
+	freezeAll->Data = CMB_BLANK;
+	ffc freezeFFC = Screen->LoadFFC(FFC_FREEZEFFC);
+	freezeFFC->Data = CMB_BLANK;
+}

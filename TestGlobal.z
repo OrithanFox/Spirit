@@ -1,0 +1,22 @@
+import "std.zh";
+import "string.zh";
+
+Global script Active{
+	void run(){
+		while(true){
+			GhostWeaponUpdate();
+			Waitdraw():
+			Waitframe();
+		}
+	}
+}
+
+Global script OnExit{
+	void run(){
+	}
+}
+
+Global script OnContinue{
+	void run(){
+	}
+}
