@@ -1,7 +1,6 @@
 import "std.zh"
 import "string.zh"
-import "spiritweapon\SpiritWeapon.zh"
-import "spiritweapon\scripts.zh"
+import "spiritweapon_zh\Alpha-1\SpiritWeapon.zh"
 
 global script Active{
 	void run(){
@@ -18,11 +17,6 @@ global script OnExit{
 }
 
 global script OnContinue{
-	void run(){
-	}
-}
-
-item script Slash{
 	void run(){
 	}
 }
