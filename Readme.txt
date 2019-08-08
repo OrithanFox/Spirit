@@ -1,6 +1,6 @@
 SPIRIT WEAPON FOR ZELDA QUEST AETERNAL
 READ ME
-
+This document has been invaded by the Octorok Gang
 =================== HEADER INFORMATION ===================
 NAME: Spirit Weapon
 AUTHOR: Orithan Fox
