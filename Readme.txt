@@ -4,7 +4,7 @@ Wah ha ha! You found me! ~ Random Korok
 =================== HEADER INFORMATION ===================
 NAME: Spirit Weapon
 AUTHOR: Orithan Fox
-VERSION: Alpha 1
+VERSION: Alpha 1, Build 0.1
 ZELDA QUEST VERSION: Zelda Quest AEternal (v2.55) Alpha 29 and up
 
 WARNING! THIS IS IN ALPHA STATE. FEATURES MAY BE CHANGED OR REMOVED WITHOUT PRIOR WARNING. SOME FEATURES ARE INCOMPLETE OR NONFUNCTIONAL. YOU HAVE BEEN WARNED.
