@@ -1,6 +1,7 @@
 SPIRIT WEAPON FOR ZELDA QUEST AETERNAL
 READ ME
 
+
 =================== HEADER INFORMATION ===================
 NAME: Spirit Weapon
 AUTHOR: Orithan Fox
